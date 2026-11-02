@@ -51,7 +51,8 @@ export function CaptionViewV2({
   const { toast } = useToast()
   const imageClasses =
     imageClassName ??
-    'w-full h-auto max-w-[400px] sm:max-w-[500px] md:max-w-[600px] max-h-[500px] sm:max-h-[600px] md:max-h-[700px] object-contain'
+    'w-full h-auto max-w-[400px] sm:max-w-[500px] md:max-w-[600px] ' +
+    'max-h-[500px] sm:max-h-[600px] md:max-h-[700px] object-contain'
   const containerClasses =
     containerClassName ?? 'w-full flex items-center justify-center mb-8 mt-12'
   const isAutoTone = tone === 'auto'
@@ -200,7 +201,8 @@ export function CaptionViewV2({
 
         {/* Caption text */}
         <p
-          className={`text-center ${captionTextClass} text-base sm:text-lg leading-relaxed px-4 sm:px-6`}
+          className={`text-center ${captionTextClass}
+            text-base sm:text-lg leading-relaxed px-4 sm:px-6`}
         >
           {content}
         </p>

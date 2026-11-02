@@ -108,7 +108,9 @@ test('an ambiguous submit retries with the same idempotency key', async () => {
 test('401 refreshes the user JWT and polls the existing job', async () => {
   const f = fixture()
   let authCalls = 0
-  f.options.getAuth = async () => ({ ...f.auth, accessToken: authCalls++ ? 'fresh-jwt' : 'old-jwt' })
+  f.options.getAuth = async () => ({
+    ...f.auth, accessToken: authCalls++ ? 'fresh-jwt' : 'old-jwt',
+  })
   f.respond([401, f.job('completed')])
   await runCaptionJob(f.imageId, f.options)
   assert.equal(authCalls, 2)

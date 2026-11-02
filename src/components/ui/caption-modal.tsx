@@ -63,7 +63,8 @@ export function CaptionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-center items-center bg-black/80 backdrop-blur-sm cursor-pointer p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-center bg-black/80
+        backdrop-blur-sm cursor-pointer p-4 overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"

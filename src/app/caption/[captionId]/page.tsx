@@ -104,7 +104,8 @@ export default function CaptionPage({ params }: CaptionPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-start justify-center px-4 pb-8 pt-2">
+    <div className="min-h-screen bg-background text-foreground flex items-start
+      justify-center px-4 pb-8 pt-2">
       <CaptionViewV2
         id={captionData.id}
         imageUrl={captionData.image_url}

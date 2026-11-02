@@ -104,7 +104,7 @@ test('partially completed jobs display their successful captions', async () => {
   assert.deepEqual(page.props.initialCaptions.map(c => c.id), [row.id])
 })
 
-test('queued, running, failed, and empty jobs show a status without starting generation', async () => {
+test('pending, failed, and empty jobs show status without starting generation', async () => {
   for (const status of ['queued', 'running', 'failed', 'completed']) {
     const page = loadPage({ status, captionIds: status === 'failed' ? [randomUUID()] : [] })
     const result = await page.render()

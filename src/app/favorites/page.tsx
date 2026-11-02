@@ -322,7 +322,8 @@ export default function SavedCaptionsPage() {
                             srcSet={srcSet}
                             sizes="(max-width: 640px) 320px, (max-width: 768px) 320px, 320px"
                             alt={`Caption Image ${caption.id}`}
-                            className="absolute inset-0 w-full h-full object-contain sm:object-cover rounded"
+                            className="absolute inset-0 w-full h-full object-contain
+                              sm:object-cover rounded"
                             loading="lazy"
                           />
                         </div>
