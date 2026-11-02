@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { LoginPromptModal } from "@/components/ui/login-prompt-modal";
 import { checkAuthStatusAction } from "@/app/actions/auth/check-auth-status";
 import Link from "next/link";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, Search } from "lucide-react";
 import { buildCaptionShareUrl } from "@/utils/site-url";
 import { BrandImage } from "@/components/brand-image";
 import {
@@ -111,6 +111,22 @@ export default function PopularCaptionsPageClient({
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [savedCaptions, setSavedCaptions] = useState<string[]>([]);
   const isFirstLoad = useRef(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const query = searchTerm.trim().toLowerCase();
+  const filteredCaptions = popularCaptions.filter(caption =>
+    caption.content.toLowerCase().includes(query));
+
+  const updateSearch = (value: string) => {
+    setSearchTerm(value);
+    setVisibleCount(itemsPerPage);
+    setSelectedIndex(null);
+  };
+
+  const clearSearch = () => {
+    updateSearch("");
+    searchRef.current?.focus();
+  };
 
   const [filter, setFilter] = useState<PopularCaptionsFilter>(initialFilter);
   const filterHrefs: Partial<Record<PopularCaptionsFilter, string>> = {
@@ -296,17 +312,17 @@ export default function PopularCaptionsPageClient({
     };
 
     const handleArrowKeys = (event: KeyboardEvent) => {
-      if (selectedIndex === null || popularCaptions.length === 0) return;
+      if (selectedIndex === null || filteredCaptions.length === 0) return;
 
       if (event.key === "ArrowLeft") {
         setSelectedIndex((prev) => {
           if (prev === null) return null;
-          return prev === 0 ? popularCaptions.length - 1 : prev - 1;
+          return prev === 0 ? filteredCaptions.length - 1 : prev - 1;
         });
       } else if (event.key === "ArrowRight") {
         setSelectedIndex((prev) => {
           if (prev === null) return null;
-          return prev === popularCaptions.length - 1 ? 0 : prev + 1;
+          return prev === filteredCaptions.length - 1 ? 0 : prev + 1;
         });
       }
     };
@@ -317,7 +333,7 @@ export default function PopularCaptionsPageClient({
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("keydown", handleArrowKeys);
     };
-  }, [selectedIndex, popularCaptions.length]);
+  }, [selectedIndex, filteredCaptions.length]);
 
   const loadMore = () => {
     setVisibleCount((prev) => prev + itemsPerPage);
@@ -329,8 +345,8 @@ export default function PopularCaptionsPageClient({
     setVisibleCount(newValue);
   };
 
-  const visibleCaptions = popularCaptions.slice(0, visibleCount);
-  const hasMore = visibleCount < popularCaptions.length;
+  const visibleCaptions = filteredCaptions.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredCaptions.length;
 
   if (isLoading) {
     return (
@@ -448,7 +464,11 @@ export default function PopularCaptionsPageClient({
               <button
                 key={key}
                 type="button"
-                onClick={() => setFilter(key)}
+                onClick={() => {
+                  setFilter(key);
+                  setVisibleCount(itemsPerPage);
+                  setSelectedIndex(null);
+                }}
                 className={className}
               >
                 {label}
@@ -467,7 +487,39 @@ export default function PopularCaptionsPageClient({
         </div>
       </div>
       <div className="flex-1 w-full flex flex-col gap-8 p-4 relative">
-        <div className="flex justify-end items-center w-full max-w-7xl mx-auto px-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between
+          w-full max-w-7xl mx-auto px-4">
+          <div className="w-full sm:max-w-md">
+            <label htmlFor="caption-search" className="block text-sm font-medium mb-2">
+              Search Top 100 captions
+            </label>
+            <div className="flex items-center gap-2 rounded-lg border border-primary/30
+              bg-background px-3 focus-within:ring-2 focus-within:ring-primary">
+              <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input
+                ref={searchRef}
+                id="caption-search"
+                type="search"
+                value={searchTerm}
+                onChange={event => updateSearch(event.target.value)}
+                onKeyDown={event => { if (event.key === "Escape") clearSearch(); }}
+                placeholder="Try finals or friendship"
+                aria-describedby="caption-search-results"
+                className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
+              />
+              {searchTerm && <button type="button" onClick={clearSearch}
+                className="shrink-0 rounded px-2 py-2 text-sm text-primary
+                  hover:bg-primary/10 focus-visible:outline focus-visible:outline-2">
+                Clear search
+              </button>}
+            </div>
+            <p id="caption-search-results" role="status" aria-live="polite" aria-atomic="true"
+              className="mt-2 text-sm text-muted-foreground">
+              {filteredCaptions.length} {filteredCaptions.length === 1 ? "caption" : "captions"}
+              {query ? " matching your search" : " available"} in{" "}
+              {filterOptions.find(option => option.key === filter)?.label}.
+            </p>
+          </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">Show</span>
               <div className="relative" ref={dropdownRef}>
@@ -506,7 +558,25 @@ export default function PopularCaptionsPageClient({
           </div>
         </div>
       {visibleCaptions.length === 0 ? (
-        <p className="text-center text-gray-400 mt-12 text-lg">No captions found.</p>
+        <div className="text-center mt-12 px-4 space-y-3">
+          <h2 className="text-lg font-medium">{query && popularCaptions.length > 0
+            ? "No captions match your search" : "No captions in this time period"}</h2>
+          <p className="text-muted-foreground">{query && popularCaptions.length > 0
+            ? "Try a different keyword or clear your search to browse this Top 100 feed."
+            : "Choose another time period to discover more captions."}</p>
+          {searchTerm && <button type="button" onClick={clearSearch}
+            className="rounded-lg border border-primary/30 px-4 py-2
+              text-primary hover:bg-primary/10">
+            Clear search
+          </button>}
+          {filter !== "all" && (allTimeHref
+            ? <Link href={allTimeHref}
+                className="inline-block rounded-lg px-4 py-2 text-primary underline">
+                Browse All Time
+              </Link>
+            : <button type="button" onClick={() => { setFilter("all"); setSelectedIndex(null); }}
+                className="rounded-lg px-4 py-2 text-primary underline">Browse All Time</button>)}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {visibleCaptions.map((caption, index) => {
@@ -675,9 +745,9 @@ export default function PopularCaptionsPageClient({
             )}
 
       {/* Modal */}
-      {selectedIndex !== null && popularCaptions.length > 0 && (
+      {selectedIndex !== null && filteredCaptions.length > 0 && (
         <CaptionModal
-          items={popularCaptions.map((caption) => ({
+          items={filteredCaptions.map((caption) => ({
             id: caption.id,
             content: caption.content,
             imageUrl: caption.image_url,
