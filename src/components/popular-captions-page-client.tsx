@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CaptionModal } from "@/components/ui/caption-modal";
 import { BookmarkButton } from "@/components/ui/bookmark-button";
+import { captionTopics, matchesCaptionTopic, type CaptionTopic } from "@/utils/caption-topics";
 import { Top100CaptionImage } from "@/components/top-100-caption-image";
 
 // functions to load in our pregenrated thumbnails
@@ -113,9 +114,27 @@ export default function PopularCaptionsPageClient({
   const isFirstLoad = useRef(true);
   const [searchTerm, setSearchTerm] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const [topic, setTopic] = useState<CaptionTopic>("all");
   const query = searchTerm.trim().toLowerCase();
-  const filteredCaptions = popularCaptions.filter(caption =>
+  const searchedCaptions = popularCaptions.filter(caption =>
     caption.content.toLowerCase().includes(query));
+  const filteredCaptions = searchedCaptions.filter(caption =>
+    matchesCaptionTopic(caption.content, topic));
+  const topicLabel = captionTopics.find(item => item.id === topic)?.label;
+
+  const updateTopic = (value: CaptionTopic) => {
+    setTopic(value);
+    setVisibleCount(itemsPerPage);
+    setSelectedIndex(null);
+  };
+
+  const clearFilters = () => {
+    setTopic("all");
+    setSearchTerm("");
+    setVisibleCount(itemsPerPage);
+    setSelectedIndex(null);
+    searchRef.current?.focus();
+  };
 
   const updateSearch = (value: string) => {
     setSearchTerm(value);
@@ -487,7 +506,7 @@ export default function PopularCaptionsPageClient({
         </div>
       </div>
       <div className="flex-1 w-full flex flex-col gap-8 p-4 relative">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between
           w-full max-w-7xl mx-auto px-4">
           <div className="w-full sm:max-w-md">
             <label htmlFor="caption-search" className="block text-sm font-medium mb-2">
@@ -516,11 +535,34 @@ export default function PopularCaptionsPageClient({
             <p id="caption-search-results" role="status" aria-live="polite" aria-atomic="true"
               className="mt-2 text-sm text-muted-foreground">
               {filteredCaptions.length} {filteredCaptions.length === 1 ? "caption" : "captions"}
-              {query ? " matching your search" : " available"} in{" "}
+              {query || topic !== "all" ? " matching your filters" : " available"}
+              {topicLabel ? ` · ${topicLabel}` : ""} in{" "}
               {filterOptions.find(option => option.key === filter)?.label}.
             </p>
           </div>
-            <div className="flex items-center gap-4">
+          <div className="w-full sm:w-56 shrink-0">
+            <label htmlFor="caption-topic" className="block text-sm font-medium mb-2">
+              Topic
+            </label>
+            <select id="caption-topic" value={topic}
+              onChange={event => updateTopic(event.target.value as CaptionTopic)}
+              aria-describedby="caption-topic-help"
+              className="w-full rounded-lg border border-primary/30 bg-background px-3 py-2
+                text-sm focus-visible:outline focus-visible:outline-2
+                focus-visible:outline-primary">
+              <option value="all">All topics ({searchedCaptions.length})</option>
+              {captionTopics.map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.label} ({searchedCaptions.filter(caption =>
+                    matchesCaptionTopic(caption.content, item.id)).length})
+                </option>
+              ))}
+            </select>
+            <p id="caption-topic-help" className="mt-2 text-xs text-muted-foreground">
+              Topics suggested from caption text.
+            </p>
+          </div>
+            <div className="flex items-center gap-4 shrink-0">
               <span className="text-sm text-muted-foreground">Show</span>
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -559,15 +601,17 @@ export default function PopularCaptionsPageClient({
         </div>
       {visibleCaptions.length === 0 ? (
         <div className="text-center mt-12 px-4 space-y-3">
-          <h2 className="text-lg font-medium">{query && popularCaptions.length > 0
-            ? "No captions match your search" : "No captions in this time period"}</h2>
-          <p className="text-muted-foreground">{query && popularCaptions.length > 0
-            ? "Try a different keyword or clear your search to browse this Top 100 feed."
+          <h2 className="text-lg font-medium">
+            {(query || topic !== "all") && popularCaptions.length > 0
+            ? "No captions match your filters" : "No captions in this time period"}</h2>
+          <p className="text-muted-foreground">
+            {(query || topic !== "all") && popularCaptions.length > 0
+            ? "Try another topic or keyword, or clear filters to browse this Top 100 feed."
             : "Choose another time period to discover more captions."}</p>
-          {searchTerm && <button type="button" onClick={clearSearch}
+          {(searchTerm || topic !== "all") && <button type="button" onClick={clearFilters}
             className="rounded-lg border border-primary/30 px-4 py-2
               text-primary hover:bg-primary/10">
-            Clear search
+            Clear filters
           </button>}
           {filter !== "all" && (allTimeHref
             ? <Link href={allTimeHref}
