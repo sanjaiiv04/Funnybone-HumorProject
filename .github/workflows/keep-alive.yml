@@ -1,0 +1,37 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # Match the existing HumorProject keep-alive schedule.
+    - cron: '0 12 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: supabase-keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read one public caption from Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SUPABASE_URL:?Add the SUPABASE_URL repository secret}"
+          : "${SUPABASE_ANON_KEY:?Add the SUPABASE_ANON_KEY repository secret}"
+
+          # The public key works with existing RLS; no service-role key is needed.
+          # Discard the response so caption data does not enter Actions logs.
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            --retry 3 --retry-delay 5 --retry-max-time 120 \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --output /dev/null --write-out 'Supabase database read: HTTP %{http_code}\n' \
+            "${SUPABASE_URL%/}/rest/v1/captions?select=id&is_public=eq.true&limit=1"
