@@ -29,6 +29,7 @@ import {
 import { CaptionModal } from "@/components/ui/caption-modal";
 import { BookmarkButton } from "@/components/ui/bookmark-button";
 import { captionTopics, matchesCaptionTopic, type CaptionTopic } from "@/utils/caption-topics";
+import { searchCaptionsWithContext } from "@/utils/caption-search";
 import { Top100CaptionImage } from "@/components/top-100-caption-image";
 
 // functions to load in our pregenrated thumbnails
@@ -116,8 +117,38 @@ export default function PopularCaptionsPageClient({
   const searchRef = useRef<HTMLInputElement>(null);
   const [topic, setTopic] = useState<CaptionTopic>("all");
   const query = searchTerm.trim().toLowerCase();
-  const searchedCaptions = popularCaptions.filter(caption =>
-    caption.content.toLowerCase().includes(query));
+  const [context, setContext] = useState<{
+    query: string; queries: string[]; mode: 'context' | 'keywords' | 'loading';
+  }>({ query: '', queries: [], mode: 'keywords' });
+  const activeContext = context.query === query ? context : null;
+  const searchedCaptions = searchCaptionsWithContext(
+    popularCaptions, searchTerm, activeContext?.queries,
+  );
+
+  useEffect(() => {
+    if (query.length < 2 || query.length > 200) return;
+    const controller = new AbortController();
+    let current = true;
+    const timer = setTimeout(async () => {
+      setContext({ query, queries: [], mode: 'loading' });
+      try {
+        const response = await fetch('/api/search/interpret', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }), signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('Context unavailable');
+        const result = await response.json();
+        if (current) {
+          setSelectedIndex(null);
+          setContext({ query, queries: result.queries ?? [],
+            mode: result.mode === 'context' ? 'context' : 'keywords' });
+        }
+      } catch {
+        if (current) setContext({ query, queries: [], mode: 'keywords' });
+      }
+    }, 600);
+    return () => { current = false; clearTimeout(timer); controller.abort(); };
+  }, [query]);
   const filteredCaptions = searchedCaptions.filter(caption =>
     matchesCaptionTopic(caption.content, topic));
   const topicLabel = captionTopics.find(item => item.id === topic)?.label;
@@ -519,10 +550,11 @@ export default function PopularCaptionsPageClient({
                 ref={searchRef}
                 id="caption-search"
                 type="search"
+                maxLength={200}
                 value={searchTerm}
                 onChange={event => updateSearch(event.target.value)}
                 onKeyDown={event => { if (event.key === "Escape") clearSearch(); }}
-                placeholder="Try finals or friendship"
+                placeholder="Try friendship or captions about finals"
                 aria-describedby="caption-search-results"
                 className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
               />
@@ -538,6 +570,10 @@ export default function PopularCaptionsPageClient({
               {query || topic !== "all" ? " matching your filters" : " available"}
               {topicLabel ? ` · ${topicLabel}` : ""} in{" "}
               {filterOptions.find(option => option.key === filter)?.label}.
+              {query && <span className="block mt-1">
+                {activeContext?.mode === 'loading' ? 'Understanding your search…' :
+                  activeContext?.mode === 'context' ? 'Context-assisted search' : 'Keyword search'}
+              </span>}
             </p>
           </div>
           <div className="w-full sm:w-56 shrink-0">
@@ -559,7 +595,7 @@ export default function PopularCaptionsPageClient({
               ))}
             </select>
             <p id="caption-topic-help" className="mt-2 text-xs text-muted-foreground">
-              Topics suggested from caption text.
+              Topics suggested from caption text. Search is limited to this Top 100 feed.
             </p>
           </div>
             <div className="flex items-center gap-4 shrink-0">
