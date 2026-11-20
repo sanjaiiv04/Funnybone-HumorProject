@@ -57,7 +57,7 @@ test('request cap and provider cooldown prevent repeated upstream calls', async 
   assert.equal(calls, 10)
 })
 
-test('rewrites retrieve real captions, preserve direct ranking, deduplicate, and avoid negation expansion', () => {
+test('rewrites preserve direct ranking, deduplicate, and avoid negation expansion', () => {
   const captions = [{ content: 'Exam anxiety is real.' },
     { content: 'Stressed before finals again.' }, { content: 'Dinner time.' }]
   assert.deepEqual(searchCaptionsWithContext(captions, 'stressed before finals',
